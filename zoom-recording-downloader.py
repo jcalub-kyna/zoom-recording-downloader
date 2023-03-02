@@ -36,7 +36,7 @@ AUTHORIZATION_HEADER = {'Authorization': ACCESS_TOKEN}
 API_ENDPOINT_USER_LIST = 'https://api.zoom.us/v2/users'
 
 # Start date now split into YEAR, MONTH, and DAY variables (Within 6 month range)
-RECORDING_START_YEAR = 2022
+RECORDING_START_YEAR = 2018
 RECORDING_START_MONTH = 1
 RECORDING_START_DAY = 1
 RECORDING_END_DATE = date.today()
@@ -101,11 +101,11 @@ def get_user_ids():
 
 def format_filename(recording, file_type, file_extension, recording_type, recording_id):
     uuid = recording['uuid']
-    topic = recording['topic'].replace('/', '&')
+    topic = recording['topic'].replace(':', ' ')
     rec_type = recording_type.replace("_", " ").title()
-    meeting_time = parse(recording['start_time']).strftime('%Y.%m.%d - %I.%M %p UTC')
+    meeting_time = parse(recording['start_time']).strftime('%Y%m%d')
     return '{} - {} - {}.{}'.format(
-        meeting_time, topic+" - "+rec_type, recording_id, file_extension.lower()),'{} - {}'.format(topic, meeting_time)
+        meeting_time, topic+" - "+rec_type, recording_id, file_extension.lower()),'{} - {}'.format(meeting_time, topic)
 
 
 def get_downloads(recording):
@@ -248,11 +248,11 @@ def main():
         for index, recording in enumerate(recordings):
             success = False
             meeting_id = recording['uuid']
-            if meeting_id in COMPLETED_MEETING_IDS:
-                print("==> Skipping already downloaded meeting: {}".format(meeting_id))
-                continue
+            # if meeting_id in COMPLETED_MEETING_IDS:
+            #     print("==> Skipping already downloaded meeting: {}".format(meeting_id))
+            #     continue
 
-            downloads = get_downloads(recording)
+            # downloads = get_downloads(recording)
             for file_type, file_extension, download_url, recording_type, recording_id in downloads:
                 if recording_type != 'incomplete':
                     filename, foldername = format_filename(
@@ -262,17 +262,22 @@ def main():
                     print("==> Downloading ({} of {}) as {}: {}: {}".format(
                         index+1, total_count, recording_type, recording_id, truncated_url))
                     success |= download_recording(download_url, email, filename, foldername)
+                    meeting_time = parse(recording['start_time']).strftime('%Y%m%d')
+                    meeting_time,'{} - {}'.format(meeting_time)
                     #success = True
-                else:
-                    print("### Incomplete Recording ({} of {}) for {}".format(index+1, total_count, recording_id))
-                    success = False         
+
+                # remove fail for downloading 
+                # else:
+                #     print("### Incomplete Recording ({} of {}) for {}".format(index+1, total_count, recording_id))
+                #     success = False         
 
             if success:
                 # if successful, write the ID of this recording to the completed file
-                with open(COMPLETED_MEETING_IDS_LOG, 'a') as log:
+                with open(COMPLETED_MEETING_IDS_LOG, 'a' , meeting_time) as log:
                     COMPLETED_MEETING_IDS.add(meeting_id)
                     log.write(meeting_id)
                     log.write('\n')
+                    log.write(meeting_time)
                     log.flush()
 
     print(color.BOLD + color.GREEN + "\n*** All done! ***" + color.END)
